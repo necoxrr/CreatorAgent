@@ -1,0 +1,50 @@
+# CreatorAgent 项目全局规则
+
+## 项目定位
+面向小红书/抖音创作者的AI智能体平台，全栈项目。
+
+## 技术栈
+- 前端: Vue 3 (Composition API + `<script setup>`) + TypeScript + Vite + TailwindCSS
+- 后端: Python 3.12 + FastAPI + LangChain + LangGraph
+- 数据库: Supabase (Postgres + pgvector)
+- 向量库: ChromaDB
+- 外部API: Firecrawl, OpenAI
+- 部署: Vercel (前端) + Railway (后端)
+
+## 代码风格铁律
+1. **TypeScript 优先**: 所有前端代码必须用TS，禁止用any除非有充分理由
+2. **类型定义集中**: 共享类型放 `packages/shared/types/`
+3. **组件拆分原则**: 单个组件不超过200行，超过就拆
+4. **API命名**: RESTful，`/api/v1/资源名/动作`
+5. **错误处理**: 每个API路由必须有try-catch + 统一错误响应格式
+6. **Python类型标注**: 所有函数必须标注参数和返回值类型
+7. **注释语言**: 代码注释用中文，变量/函数名用英文
+
+## 项目结构约定
+apps/web/       → Vue 3 前端，端口5173（Vite默认）
+apps/server/ → 后端，端口8000
+packages/shared/ → 共享类型和工具
+⚠️ 后端文件直接放在 apps/server/ 下，比如 apps/server/crawler/ 而不是 apps/server/apps/crawler/
+
+## 测试铁律（开发即测试）
+1. **API开发 = 代码 + pytest**：每写完1个API路由，必须在 `apps/server/tests/` 下写对应pytest用例，覆盖正常+异常+边界
+2. **页面开发 = 组件 + Playwright**：每做完1个页面，必须在 `apps/web/e2e/` 下写对应Playwright脚本，覆盖加载态+正常流程+错误态
+3. **不写测试不算完成**：告诉我"XX功能完成"时，必须包含测试代码
+4. **pytest规范**：
+   - fixture放conftest.py
+   - 用@parametrize覆盖多组数据
+   - 接口测试覆盖：200/400/401/500
+5. **Playwright规范**：
+   - 用data-testid做定位器优先
+   - 覆盖页面三态（正常/空态/错误态）
+   - 关键操作加截图断言
+   
+## 每次改代码前必须
+0. **模块预警**：扫描所有 prompts/week*.md 的"⚠️ 实战踩坑"区域 + docs/bugs.md。
+   若当前任务涉及相同标签/模块，展示：
+   "⚠️ 开始前请注意：1. ... 2. ... 是否继续？"
+   等用户确认后再动手。
+1. 先读相关文件了解上下文
+2. 给出改动计划再执行
+3. 改完自动跑测试验证
+4. 新增功能必须附带测试
