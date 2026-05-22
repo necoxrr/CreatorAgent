@@ -6,7 +6,8 @@ export function useGetTrends() {
   return useQuery<Trend[]>({
     queryKey: ['trends'],
     queryFn: async () => {
-      return await api.get('/api/v1/trends') as unknown as Trend[]
+      const res = await api.get('/api/v1/trends')
+      return (res as unknown as { code: number; data: Trend[]; message: string }).data
     }
   })
 }

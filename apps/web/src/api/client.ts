@@ -8,10 +8,23 @@ const api = axios.create({
 
 api.interceptors.response.use(
   res => {
-    if (res.data.code !== 0) throw new Error(res.data.message)
-    return res.data.data
+    if (res.data.code !== undefined && res.data.code !== 0) throw new Error(res.data.message)
+    return res.data
   },
   err => Promise.reject(err)
 )
+
+export interface RecommendRequest {
+  keywords: string[]
+  user_preferred_tags?: string[]
+  platform?: string
+  top_k?: number
+}
+
+export const topicsApi = {
+  recommend(params: RecommendRequest) {
+    return api.post('/api/v1/topics/recommend', params)
+  }
+}
 
 export default api

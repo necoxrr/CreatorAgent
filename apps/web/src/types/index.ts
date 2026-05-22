@@ -8,10 +8,14 @@ export interface Trend {
 }
 
 export interface TopicRecommendation {
+  id: string
   title: string
-  score: number
-  reason: string
-  source_url: string
+  content: string
+  tags: string[]
+  hot_score: number
+  style_match: number
+  recency_decay: number
+  final_score: number
 }
 
 export interface AgentState {

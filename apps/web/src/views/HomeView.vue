@@ -9,6 +9,9 @@
         <router-link to="/trends" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition">
           🔥 热点发现
         </router-link>
+        <router-link to="/topics" class="px-6 py-3 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition">
+          📋 选题推荐
+        </router-link>
         <router-link to="/editor" class="px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition">
           ✍️ 文案创作
         </router-link>
