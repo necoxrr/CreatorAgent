@@ -18,7 +18,8 @@ router = APIRouter(prefix="/api/v1/topics", tags=["选题推荐"])
 
 class RecommendRequest(BaseModel):
     """选题推荐请求"""
-    user_preferred_tags: list[str] = []
+    keywords: list[str] = []  # 关键词列表，用于语义检索
+    user_preferred_tags: list[str] = []  # 用户偏好标签（TODO: 需要真实风格向量训练数据）
     platform: Optional[str] = None
     top_k: int = Query(default=10, ge=1, le=50, description="返回数量")
 
@@ -48,49 +49,53 @@ async def recommend_topics(
     """
     获取个性化选题推荐
 
-    基于用户偏好标签，从已索引的选题库中检索并排序
+    - keywords: 关键词列表 → ChromaDB 语义检索（若 collection 有数据）
+    - user_preferred_tags: 用户偏好标签 → 用于风格匹配打分（TODO: 需要真实风格向量训练数据）
+    - 若 ChromaDB 无数据，则 fallback 到 Supabase 按 heat_score 排序
     """
     try:
-        # 初始化组件
         embedder = get_embedder()
         vector_store = get_vector_store()
         topic_engine = get_topic_engine()
 
-        # 如果有用户偏好标签，先进行向量检索
-        if request.user_preferred_tags:
-            # 将用户偏好转换为查询向量（异步）
-            preference_text = " ".join(request.user_preferred_tags)
-            query_vector = await embedder.embed_query(preference_text)
+        ranked = []
 
-            # 语义检索（同步）
+        # 优先用 keywords 做 ChromaDB 语义检索
+        if request.keywords:
+            query_text = " ".join(request.keywords)
+            query_vector = embedder.embed_query(query_text)
             search_results = vector_store.similarity_search(
                 query_embedding=query_vector,
                 n_results=request.top_k,
                 where={"platform": request.platform} if request.platform else None,
             )
 
-            # 获取原始选题数据
             if search_results:
                 supabase = get_supabase()
                 topic_ids = [r["id"] for r in search_results]
                 result = supabase.table("hot_topics").select("*").in_("id", topic_ids).execute()
-
-                # 构造成字典便于查找
                 topic_dict = {t["id"]: t for t in result.data}
 
-                # 使用 topic_engine 排序
                 topics_to_rank = []
                 for r in search_results:
                     topic_id = r["id"]
                     if topic_id in topic_dict:
                         topic = topic_dict[topic_id]
+                        eng = topic.get("engagement") or {}
+                        if not eng or all(v == 0 for v in eng.values()):
+                            heat = topic.get("heat_score") or 0
+                            eng = {"views": heat, "likes": 0, "comments": 0, "shares": 0}
+                        # 注入 ChromaDB 语义相似度 distance 作为额外排序因子
+                        distance = r.get("distance") or 1.0
+                        similarity_score = max(0.0, 1.0 - distance / 2.0)  # 归一化到 [0,1]
                         topics_to_rank.append({
                             "id": topic["id"],
                             "title": topic.get("title", ""),
                             "content": r["document"],
                             "tags": topic.get("tags", []),
                             "published_at": topic.get("published_at"),
-                            "engagement": topic.get("engagement", {}),
+                            "engagement": eng,
+                            "similarity": similarity_score,  # 额外的语义相似度分数
                         })
 
                 ranked = topic_engine.rank_topics(
@@ -98,31 +103,34 @@ async def recommend_topics(
                     user_preferred_tags=request.user_preferred_tags,
                     top_n=request.top_k,
                 )
-            else:
-                ranked = []
-        else:
-            # 无偏好时，直接从数据库获取最新热题
+            # ChromaDB 为空则 fallback 到 Supabase
+
+        # Fallback / 无 keywords 时直接查 Supabase
+        if not ranked:
             supabase = get_supabase()
             query = supabase.table("hot_topics").select("*")
-
             if request.platform:
                 query = query.eq("platform", request.platform)
-
             result = query.order("heat_score", desc=True).limit(request.top_k).execute()
 
+            topics_data = []
+            for t in result.data:
+                heat = t.get("heat_score") or 0
+                eng = t.get("engagement") or {}
+                if not eng or all(v == 0 for v in eng.values()):
+                    eng = {"views": heat, "likes": 0, "comments": 0, "shares": 0}
+                topics_data.append({
+                    "id": t["id"],
+                    "title": t.get("title", ""),
+                    "content": t.get("content", ""),
+                    "tags": t.get("tags", []),
+                    "published_at": t.get("published_at"),
+                    "engagement": eng,
+                })
+
             ranked = topic_engine.rank_topics(
-                topics=[
-                    {
-                        "id": t["id"],
-                        "title": t.get("title", ""),
-                        "content": t.get("content", ""),
-                        "tags": t.get("tags", []),
-                        "published_at": t.get("published_at"),
-                        "engagement": t.get("engagement", {}),
-                    }
-                    for t in result.data
-                ],
-                user_preferred_tags=[],
+                topics=topics_data,
+                user_preferred_tags=request.user_preferred_tags,
                 top_n=request.top_k,
             )
 

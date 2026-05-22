@@ -4,6 +4,7 @@ VectorStore 模块测试
 import pytest
 import tempfile
 import shutil
+from apps.rag.embedder import get_embedding_dimensions
 from apps.rag.vector_store import VectorStore
 
 
@@ -23,15 +24,17 @@ class TestVectorStore:
         store.initialize()
         assert store._client is not None
         assert store._collection is not None
+        assert store.embedding_dimension == get_embedding_dimensions()
         store.close()
 
     def test_add_documents(self, temp_dir):
         """添加文档测试"""
         store = VectorStore(persist_directory=temp_dir)
         store.initialize()
+        dim = store.embedding_dimension
 
         ids = ["1", "2", "3"]
-        embeddings = [[0.1] * 1536, [0.2] * 1536, [0.3] * 1536]
+        embeddings = [[0.1] * dim, [0.2] * dim, [0.3] * dim]
         documents = ["doc1", "doc2", "doc3"]
 
         store.add_documents(ids, embeddings, documents)
@@ -41,15 +44,16 @@ class TestVectorStore:
         """语义检索测试"""
         store = VectorStore(persist_directory=temp_dir)
         store.initialize()
+        dim = store.embedding_dimension
 
         ids = ["1", "2", "3"]
-        embeddings = [[0.1] * 1536, [0.5] * 1536, [0.9] * 1536]
+        embeddings = [[0.1] * dim, [0.5] * dim, [0.9] * dim]
         documents = ["热门话题A", "普通话题B", "冷门话题C"]
 
         store.add_documents(ids, embeddings, documents)
 
         # 查询接近 id=1 的向量
-        results = store.similarity_search([0.15] * 1536, n_results=2)
+        results = store.similarity_search([0.15] * dim, n_results=2)
         assert len(results) == 2
         assert results[0]["id"] == "1"  # 最接近
         store.close()
@@ -58,7 +62,21 @@ class TestVectorStore:
         """空检索测试"""
         store = VectorStore(persist_directory=temp_dir)
         store.initialize()
+        dim = store.embedding_dimension
 
-        results = store.similarity_search([0.5] * 1536, n_results=5)
+        results = store.similarity_search([0.5] * dim, n_results=5)
         assert results == []
         store.close()
+
+    def test_force_recreate(self, temp_dir):
+        """强制重建 collection 测试"""
+        store = VectorStore(persist_directory=temp_dir)
+        store.initialize()
+        assert store._collection is not None
+        store.close()
+
+        # 强制重建
+        store2 = VectorStore(persist_directory=temp_dir)
+        store2.initialize(force_recreate=True)
+        assert store2._collection is not None
+        store2.close()

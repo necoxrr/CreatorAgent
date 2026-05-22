@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
 from .api.v1 import trends, topics
-from .crawler.scheduler import start_scheduler, setup_scheduler
 
 # 日志配置
 logging.basicConfig(
@@ -22,13 +21,8 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
-    # 启动时
     logger.info("CreatorAgent 服务启动中...")
-    setup_scheduler()
-    start_scheduler()
-    logger.info("服务启动完成")
     yield
-    # 关闭时
     logger.info("CreatorAgent 服务关闭中...")
 
 

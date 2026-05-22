@@ -72,6 +72,9 @@ class TopicEngine:
 
         Returns:
             匹配度 (0-1)
+
+        TODO: 当前为 Jaccard 文本匹配，需要真实用户风格向量训练数据才能生效。
+              style_profile_id 参数预留，待风格画像模型训练完成后启用。
         """
         if not user_preferred_tags:
             return 0.7  # 无偏好时默认
@@ -129,19 +132,20 @@ class TopicEngine:
         published_at: Optional[str],
         engagement: dict,
         user_preferred_tags: list[str],
+        similarity: float = 1.0,
     ) -> TopicScore:
         """
         综合打分
 
-        Returns:
-            TopicScore 对象
+        Args:
+            similarity: ChromaDB 语义相似度分数 (0-1)，用于加权排序
         """
         hot_score = self.calculate_hot_score(engagement)
         style_match = self.calculate_style_match(topic_tags, user_preferred_tags)
         recency_decay = self.calculate_recency_decay(published_at)
 
-        # 综合分数：热点 × 风格匹配 × 时效衰减
-        final_score = hot_score * style_match * recency_decay
+        # 综合分数 = 热点 × 风格匹配 × 时效衰减 × 语义相似度（若无可用相似度则为1.0）
+        final_score = hot_score * style_match * recency_decay * similarity
 
         return TopicScore(
             topic_id=topic_id,
@@ -181,6 +185,7 @@ class TopicEngine:
                 published_at=topic.get("published_at"),
                 engagement=topic.get("engagement", {}),
                 user_preferred_tags=user_preferred_tags,
+                similarity=topic.get("similarity", 1.0),
             )
             scored_topics.append(score)
 

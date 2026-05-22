@@ -55,7 +55,59 @@ async def crawl_and_save(platform: str) -> int:
     # 批量插入
     result = supabase.table("hot_topics").insert(items).execute()
     logger.info(f"[{platform}] 保存 {len(result.data)} 条热搜到数据库")
+
+    # 写入 ChromaDB 向量索引
+    try:
+        await index_topics_to_chroma(result.data)
+    except Exception as e:
+        logger.warning(f"[{platform}] ChromaDB 索引失败: {e}")
+
     return len(result.data)
+
+
+async def index_topics_to_chroma(topics: list[dict]) -> None:
+    """
+    将 topics 批量写入 ChromaDB
+
+    Args:
+        topics: 从 Supabase 返回的 hot_topics 记录列表
+    """
+    if not topics:
+        return
+
+    from ..rag.embedder import get_embedder
+    from ..rag.vector_store import get_vector_store
+
+    embedder = get_embedder()
+    vector_store = get_vector_store()
+
+    # 准备嵌入数据
+    ids = []
+    texts = []
+    metadatas = []
+
+    for topic in topics:
+        topic_id = topic.get("id") or str(hash(topic.get("title", "")))
+        title = topic.get("title", "")
+        content = f"{title} {topic.get('url') or ''}"
+        ids.append(topic_id)
+        texts.append(content)
+        metadatas.append({
+            "platform": topic.get("platform", ""),
+            "heat_score": topic.get("heat_score") or 0,
+        })
+
+    # 批量向量化（local provider 是同步的，直接调用）
+    vectors = embedder.embed_texts(texts)
+
+    # 写入 ChromaDB
+    vector_store.add_documents(
+        ids=ids,
+        embeddings=vectors,
+        documents=texts,
+        metadatas=metadatas,
+    )
+    logger.info(f"已索引 {len(ids)} 条到 ChromaDB")
 
 
 async def crawl_trending() -> None:

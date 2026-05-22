@@ -19,3 +19,8 @@
 ## ⚠️ 实战踩坑（Claude Code 执行后自动追加）
 
 > 格式：| 日期 | 问题（≤20字） | 解决（≤30字） | #标签 |
+
+| 2026-05-22 | hot_score全为0 | 用heat_score归一化作后备hot_score | #topic-engine |
+| 2026-05-22 | keywords未参与过滤 | 添加keywords字段+集成ChromaDB检索 | #topics-api |
+| 2026-05-22 | style_match恒定0.7 | 加TODO注释+标注为预留参数 | #style-match |
+| 2026-05-22 | OpenAI Embedding超时 | 改用本地sentence-transformers模型 | #API对接 |
