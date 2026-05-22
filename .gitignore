@@ -16,4 +16,5 @@ dist/
 *.log
 .DS_Store
 chromadb/
+chroma_data/
 .claude/
