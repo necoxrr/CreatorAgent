@@ -54,6 +54,7 @@ async def recommend_topics(
     - 若 ChromaDB 无数据，则 fallback 到 Supabase 按 heat_score 排序
     """
     try:
+        logger.info(f"选题推荐请求: keywords={request.keywords}, platform={request.platform}, top_k={request.top_k}")
         embedder = get_embedder()
         vector_store = get_vector_store()
         topic_engine = get_topic_engine()
@@ -62,18 +63,23 @@ async def recommend_topics(
 
         # 优先用 keywords 做 ChromaDB 语义检索
         if request.keywords:
+            logger.info("开始 embedding 查询文本")
             query_text = " ".join(request.keywords)
             query_vector = embedder.embed_query(query_text)
+            logger.info("Embedding 完成，开始 ChromaDB 检索")
             search_results = vector_store.similarity_search(
                 query_embedding=query_vector,
                 n_results=request.top_k,
                 where={"platform": request.platform} if request.platform else None,
             )
+            logger.info(f"ChromaDB 检索完成，结果数: {len(search_results)}")
 
             if search_results:
+                logger.info("开始查询 Supabase")
                 supabase = get_supabase()
                 topic_ids = [r["id"] for r in search_results]
                 result = supabase.table("hot_topics").select("*").in_("id", topic_ids).execute()
+                logger.info(f"Supabase 查询完成，结果数: {len(result.data)}")
                 topic_dict = {t["id"]: t for t in result.data}
 
                 topics_to_rank = []

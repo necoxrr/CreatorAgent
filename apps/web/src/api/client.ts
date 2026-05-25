@@ -2,13 +2,14 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-  timeout: 30000,
+  timeout: 60000,
   headers: { 'Content-Type': 'application/json' }
 })
 
 api.interceptors.response.use(
   res => {
-    if (res.data.code !== undefined && res.data.code !== 0) throw new Error(res.data.message)
+    const { code, message } = res.data ?? {}
+    if (code !== undefined && code !== 0) throw new Error(message ?? '请求失败')
     return res.data
   },
   err => Promise.reject(err)

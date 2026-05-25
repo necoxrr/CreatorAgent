@@ -8,7 +8,7 @@
         <input
           v-model="keywordInput"
           type="text"
-          placeholder="输入关键词，如：美妆、美食、旅行"
+          placeholder="输入关键词，如：美妆、美食、旅行（点击下方标签可填入）"
           class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           @keyup.enter="addKeyword"
         />
@@ -39,10 +39,11 @@
         <span
           v-for="kw in keywords"
           :key="kw"
-          class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm flex items-center gap-1"
+          class="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm flex items-center gap-1 cursor-pointer hover:bg-primary/20 transition"
+          @click="keywordInput = kw"
         >
           {{ kw }}
-          <button @click="removeKeyword(kw)" class="hover:text-red-500">×</button>
+          <button @click.stop="removeKeyword(kw)" class="hover:text-red-500">×</button>
         </span>
       </div>
     </div>
