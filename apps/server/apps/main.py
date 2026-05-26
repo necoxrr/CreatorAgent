@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import get_settings
-from .api.v1 import trends, topics
+from .api.v1 import trends, topics, agent
 
 # 日志配置
 logging.basicConfig(
@@ -49,6 +49,7 @@ def create_app() -> FastAPI:
     # 注册路由
     app.include_router(trends.router)
     app.include_router(topics.router)
+    app.include_router(agent.router)
 
     @app.get("/health")
     async def health_check() -> dict:

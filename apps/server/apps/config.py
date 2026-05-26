@@ -20,8 +20,9 @@ class Settings:
     # Firecrawl
     FIRECRAWL_API_KEY: str = os.getenv("FIRECRAWL_API_KEY", "")
 
-    # OpenAI
+    # OpenAI / MiniMax
     OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_BASE_URL: str = os.getenv("OPENAI_BASE_URL", "https://api.minimax.chat/v1")
 
     # Embedding
     EMBEDDING_PROVIDER: str = os.getenv("EMBEDDING_PROVIDER", "local")  # "local" | "openai"

@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000',
-  timeout: 60000,
+  timeout: 180000,
   headers: { 'Content-Type': 'application/json' }
 })
 
@@ -25,6 +25,26 @@ export interface RecommendRequest {
 export const topicsApi = {
   recommend(params: RecommendRequest) {
     return api.post('/api/v1/topics/recommend', params)
+  }
+}
+
+export interface GenerateRequest {
+  topic: string
+  platform?: string
+  max_rewrites?: number
+}
+
+export interface GenerateResponse {
+  outline: string | null
+  content: string | null
+  adapted_content: string | null
+  quality_score: number | null
+  rewrite_count: number
+}
+
+export const agentApi = {
+  generate(params: GenerateRequest): Promise<GenerateResponse> {
+    return api.post('/api/v1/agent/generate', params)
   }
 }
 

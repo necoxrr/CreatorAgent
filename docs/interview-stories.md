@@ -13,6 +13,7 @@
 |------|------|------|
 | 2026-05-22 | 国产化Embedding方案：从OpenAI API到本地模型 | #面试素材 |
 | 2026-05-22 | Supabase RLS 生产事故：一条SQL引发的血案 | #面试素材 |
+| 2026-05-26 | LangGraph 异步节点死锁：从同步到异步的艰难迁移 | #面试素材 |
 
 ---
 
@@ -62,3 +63,27 @@ CreatorAgent 选题推荐模块需要文本向量化能力，原本调用 OpenAI
 - "Supabase RLS 与 PostgreSQL RLS 的语法细节"——`INSERT` 策略用 `WITH CHECK` 而非 `USING`
 - "排查第三方服务 API 报错的标准思路"——先确认基础连接，再用最小化复现用例定位问题层级
 - "开发和生产环境权限模型设计"——`anon` / `authenticated` / `postgres` 角色的区别与选用场景
+
+### 2026-05-26 | LangGraph 异步节点死锁：从同步到异步的艰难迁移
+
+**Situation（背景）**
+用 LangGraph 构建了一个 5 节点的 Agent 流水线（outline → content → adapter → quality → rewrite），每个节点都调用 LLM。测试时单个节点正常，但 `ainvoke()` 全流程调用时界面完全卡死，120 秒超时。
+
+**Task（任务）**
+定位卡死根因并修复，确保流水线能在 async 上下文中正常运行，同时保持代码可维护性。
+
+**Action（行动）**
+1. **分层日志定位**：发现 outline 和 content 生成完成后卡在 quality_checker，而非网络超时。用日志逐步缩小范围，确认是节点调度层面问题。
+2. **嵌套事件循环分析**：节点函数是同步的，调用 `client.generate(prompt)` 内部创建 `asyncio.run()`。在 `ainvoke` 的运行中循环内再次 `asyncio.run()` 导致嵌套死锁——子循环抢占了父循环的线程，子循环等待 I/O 时父循环无法调度。
+3. **修复路径选择**：方案 A：在线程池执行异步代码；方案 B：把节点改成 async def。优先尝试方案 A（最小改动），但 `run_in_executor` 后主循环仍无法让出。最终采用方案 B——所有节点函数改为 `async def`，`client.generate_async()` 直接 `await`，无嵌套循环。
+4. **MiniMax 接入调试**：发现 base_url 用错（`https://api.minimax.chat` → 需加 `/v1` 后缀），导致 API 返回 HTML 而非 JSON。抓包定位后修正。
+
+**Result（结果）**
+- 流水线完整运行，选题→大纲→初稿→适配→质检，全流程约 60-80 秒
+- `quality_score=7.0` 通过质检，不触发重写
+- 所有节点改为 async def，LangGraph 的 `ainvoke` 正确调度
+
+**可面试讲的点**：
+- "Python 异步嵌套死锁的排查方法"——用日志缩小范围，识别 `asyncio.run()` 在已有事件循环中的危险性
+- "同步代码到异步代码的重构策略"——当库只提供同步接口时，在线程池中用 `asyncio.run()` 创建独立循环
+- "LangGraph 节点设计最佳实践"——推荐所有节点用 `async def`，避免调度层面的隐性阻塞

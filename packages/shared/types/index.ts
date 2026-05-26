@@ -5,9 +5,10 @@
 
 export type Platform = 'xiaohongshu' | 'douyin'
 
-/**
- * 热点话题
- */
+// =====================
+// 热点相关类型
+// =====================
+
 export interface HotTopic {
   id: string
   title: string
@@ -17,9 +18,39 @@ export interface HotTopic {
   crawled_at: string
 }
 
-/**
- * 创作者画像
- */
+export type TrendsResponse = ApiResponse<HotTopic[]>
+
+// =====================
+// Agent 相关类型
+// =====================
+
+export interface GenerateRequest {
+  topic: string
+  platform?: string
+  max_rewrites?: number
+}
+
+export interface GenerateResponse {
+  outline: string | null
+  content: string | null
+  adapted_content: string | null
+  quality_score: number | null
+  rewrite_count: number
+}
+
+export type AgentPlatform = 'xiaohongshu' | 'douyin'
+
+export enum AgentNodeStatus {
+  Idle = 'idle',
+  Running = 'running',
+  Done = 'done',
+  Error = 'error',
+}
+
+// =====================
+// 创作者相关类型
+// =====================
+
 export interface CreatorProfile {
   id: string
   platform: Platform
@@ -29,23 +60,16 @@ export interface CreatorProfile {
   updated_at: string
 }
 
-/**
- * 统一 API 响应格式
- */
+// =====================
+// 统一 API 响应格式
+// =====================
+
 export interface ApiResponse<T> {
   code: number
   data: T | null
   message: string
 }
 
-/**
- * 热点列表响应
- */
-export type TrendsResponse = ApiResponse<HotTopic[]>
-
-/**
- * 错误码定义
- */
 export enum ErrorCode {
   SUCCESS = 0,
   BAD_REQUEST = 4001,
@@ -53,4 +77,15 @@ export enum ErrorCode {
   INTERNAL_ERROR = 5000,
   FIRECRAWL_ERROR = 5001,
   DATABASE_ERROR = 5002,
+}
+
+// =====================
+// 选题推荐相关类型
+// =====================
+
+export interface RecommendRequest {
+  keywords: string[]
+  user_preferred_tags?: string[]
+  platform?: string
+  top_k?: number
 }

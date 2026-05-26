@@ -21,3 +21,8 @@
 ## ⚠️ 实战踩坑（Claude Code 执行后自动追加）
 
 > 格式：| 日期 | 问题（≤20字） | 解决（≤30字） | #标签 |
+
+| 2026-05-26 | AgentState multiple values | 改用 new_state = state.model_dump() 后赋值再构造 | #agent |
+| 2026-05-26 | 节点内 asyncio.run 死锁 | 同步函数改为 async def + generate_async | #agent |
+| 2026-05-26 | MiniMax base_url 缺 /v1 | 改为 https://api.minimax.chat/v1 | #minimax |
+| 2026-05-26 | rewrite_count 变字符串 | 显式 int() 转换 | #agent |

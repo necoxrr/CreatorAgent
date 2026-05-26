@@ -15,6 +15,9 @@
         <router-link to="/editor" class="px-6 py-3 bg-accent text-white rounded-lg hover:bg-accent/90 transition">
           ✍️ 文案创作
         </router-link>
+        <router-link to="/agent" class="px-6 py-3 bg-secondary text-white rounded-lg hover:bg-secondary/90 transition">
+          🤖 Agent 工作流
+        </router-link>
         <router-link to="/dashboard" class="px-6 py-3 border border-primary text-primary rounded-lg hover:bg-primary/10 transition">
           📊 数据仪表盘
         </router-link>
